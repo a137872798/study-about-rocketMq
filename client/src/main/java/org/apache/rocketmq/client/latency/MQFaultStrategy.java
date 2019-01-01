@@ -115,7 +115,7 @@ public class MQFaultStrategy {
             return tpInfo.selectOneMessageQueue();
         }
 
-        //这里 要求 broker 不一样 怎么跟上面不一致???
+        //默认情况不使用故障延时机制  这里会返回跟上次不同的 broker下的mq 对象
         return tpInfo.selectOneMessageQueue(lastBrokerName);
     }
 

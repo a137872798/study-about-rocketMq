@@ -145,6 +145,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
         }
 
         public boolean isAvailable() {
+            //startTimestamp 代表重新可用时间
             return (System.currentTimeMillis() - startTimestamp) >= 0;
         }
 

@@ -569,7 +569,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         final long timeout
     ) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.makeSureStateOK();
-        Validators.checkMessage(msg, this.defaultMQProducer);
+            Validators.checkMessage(msg, this.defaultMQProducer);
 
         //获取 本次调用的标识
         final long invokeID = random.nextLong();
@@ -589,7 +589,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             //代表 一共发送给了 多少个 broker 因为发送失败代表这个broker 不可用 在重试时 更换broker
             String[] brokersSent = new String[timesTotal];
             for (; times < timesTotal; times++) {
-                //第一次是 null 之后mq 会被设置
+                //第一次是 null 之后mq 会被设置  这个代表的是上次失败的 broker
                 String lastBrokerName = null == mq ? null : mq.getBrokerName();
                 //这里相当于 是 负载 要将该消息发送到 能接受该topic 的 哪个broker上 上一次发送的 broker会影响到本次的选择
                 //messageQueue 相当于是一个发送请求的描述信息 —— 这个消息是 什么topic 保存在 哪个broker

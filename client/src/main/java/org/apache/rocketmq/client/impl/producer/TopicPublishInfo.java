@@ -78,7 +78,7 @@ public class TopicPublishInfo {
         if (lastBrokerName == null) {
             return selectOneMessageQueue();
         } else {
-            //这里获取到那个随机值 并修改他 使得下次获取的消息队列不同
+            //这里使用一种简易的均衡负载平摊消息  一旦上次失败后 lastBrokerName 不为null 那么下次就要避免调用同一个broker 以防再次失败
             int index = this.sendWhichQueue.getAndIncrement();
             for (int i = 0; i < this.messageQueueList.size(); i++) {
                 int pos = Math.abs(index++) % this.messageQueueList.size();
@@ -94,6 +94,7 @@ public class TopicPublishInfo {
         }
     }
 
+    //只能使用之前的 broker 下的 其他mq 了
     public MessageQueue selectOneMessageQueue() {
         //随机使用一个 队列
         int index = this.sendWhichQueue.getAndIncrement();

@@ -28,5 +28,5 @@ If you want to contribute the above listing points, you must abide our some prer
 
 ###### Readability - API must have Javadoc,some very important methods also must have javadoc
 ###### Testability - 80% above unit test coverage about main process
-###### Maintainability - Comply with our [checkstyle spec](style/rmq_checkstyle.xml), and at least 3 month update frequency
+###### Maintainability - Comply with our [checkstyle spec](style/rmq_checkstyle.xml), and at least 3 month  frequency
 ###### Deployability - We encourage you to deploy into [maven repository](http://search.maven.org/)

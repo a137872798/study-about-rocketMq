@@ -170,6 +170,7 @@ public class BrokerController {
     //普通服务器 和vip 服务器
     private RemotingServer remotingServer;
     private RemotingServer fastRemotingServer;
+    //每个broker 一开始 能够 接受哪些topic 是在启动时就决定的 通过加载指定文件的路径 所以在注册到nsv上时 生产者和消费者就能知道可以去哪个broker上发送/拉取消息
     private TopicConfigManager topicConfigManager;
     //任务对应的线程池对象
     private ExecutorService sendMessageExecutor;

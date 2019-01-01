@@ -104,7 +104,7 @@ public class IndexFile {
 
     //保存索引
     public boolean putKey(final String key, final long phyOffset, final long storeTimestamp) {
-        //索引数 小于规定值 才能 添加
+        //索引数 小于规定值 才能 添加   indexNum 默认从 MessageStoreConfig 中获取 为2000万个
         if (this.indexHeader.getIndexCount() < this.indexNum) {
             //将 key 转换成hash值
             int keyHash = indexKeyHashMethod(key);
