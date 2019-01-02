@@ -110,7 +110,7 @@ public class IndexFile {
             int keyHash = indexKeyHashMethod(key);
             //这个 就是类似hashmap
             int slotPos = keyHash % this.hashSlotNum;
-            //定位到 槽点
+            //定位到 hash槽的槽点
             int absSlotPos = IndexHeader.INDEX_HEADER_SIZE + slotPos * hashSlotSize;
 
             FileLock fileLock = null;
@@ -119,13 +119,17 @@ public class IndexFile {
 
                 // fileLock = this.fileChannel.lock(absSlotPos, hashSlotSize,
                 // false);
-                //获取 槽值 因为 一个槽 大小就是int  如果是long 可能之类就是获取long 了 不过槽的数量也没超过 int 的上限
+                // slotValue 对应的是第几个index
+
+                //这块是获取上次的 index值
+
                 int slotValue = this.mappedByteBuffer.getInt(absSlotPos);
                 //槽值对应的 应该就是索引值 不能超过当前 一共设置的 索引数量 同时  索引值 不应该小于0
                 if (slotValue <= invalidIndex || slotValue > this.indexHeader.getIndexCount()) {
                     slotValue = invalidIndex;
                 }
 
+                //计算 本 索引存入的时间距离 索引创建的时间的秒差
                 long timeDiff = storeTimestamp - this.indexHeader.getBeginTimestamp();
 
                 timeDiff = timeDiff / 1000;
@@ -144,12 +148,15 @@ public class IndexFile {
                         + this.indexHeader.getIndexCount() * indexSize;
 
                 //从 上次的 index 末尾开始写入 写入 hash值
+                //这里存储 key 的hash值的原因是  保证定长 如果key 不同可能会无法维持本数据结构
                 this.mappedByteBuffer.putInt(absIndexPos, keyHash);
                 this.mappedByteBuffer.putLong(absIndexPos + 4, phyOffset);
                 this.mappedByteBuffer.putInt(absIndexPos + 4 + 8, (int) timeDiff);
-                //相同hash值的 上一个位置
+                //这里是解决hash冲突的关键 保留了 上次 相同hash值对应的 index 下标
+                //解决方式为  首先通过hash 获取index 下标 找到对应数据 如果对应不上通过 这个 slotValue 作为 第二次查询的 index 下标继续查询直到 index 对应的值相等
                 this.mappedByteBuffer.putInt(absIndexPos + 4 + 8 + 4, slotValue);
 
+                //让 hash槽的值记录了 index 总数
                 this.mappedByteBuffer.putInt(absSlotPos, this.indexHeader.getIndexCount());
 
                 if (this.indexHeader.getIndexCount() <= 1) {
@@ -218,7 +225,7 @@ public class IndexFile {
             int keyHash = indexKeyHashMethod(key);
             //获取到位置点
             int slotPos = keyHash % this.hashSlotNum;
-            //换算得到位置点
+            //换算得到位置点  这里 就保存了 index 的下标
             int absSlotPos = IndexHeader.INDEX_HEADER_SIZE + slotPos * hashSlotSize;
 
             FileLock fileLock = null;
@@ -228,6 +235,7 @@ public class IndexFile {
                     // hashSlotSize, true);
                 }
 
+                //获取index 下标
                 int slotValue = this.mappedByteBuffer.getInt(absSlotPos);
                 // if (fileLock != null) {
                 // fileLock.release();
@@ -238,15 +246,17 @@ public class IndexFile {
                     || this.indexHeader.getIndexCount() <= 1) {
                 } else {
                     for (int nextIndexToRead = slotValue; ; ) {
+                        //当前 list 已经装满 就不需要再查询了
                         if (phyOffsets.size() >= maxNum) {
                             break;
                         }
 
-                        //从第一个slotValue 开始 查
+                        //从第一个index 开始 查
                         int absIndexPos =
                             IndexHeader.INDEX_HEADER_SIZE + this.hashSlotNum * hashSlotSize
                                 + nextIndexToRead * indexSize;
 
+                        //获取该index 对应的hash  物理偏移量等
                         int keyHashRead = this.mappedByteBuffer.getInt(absIndexPos);
                         long phyOffsetRead = this.mappedByteBuffer.getLong(absIndexPos + 4);
 
@@ -254,6 +264,7 @@ public class IndexFile {
                         //相同hash 的前一个索引
                         int prevIndexRead = this.mappedByteBuffer.getInt(absIndexPos + 4 + 8 + 4);
 
+                        //代表 已经是过时消息 也就不用再处理了 往前获取index 时间必然是更小
                         if (timeDiff < 0) {
                             break;
                         }
@@ -273,6 +284,7 @@ public class IndexFile {
                             break;
                         }
 
+                        //这里还没有真正筛选出正确key 的数据 因为这里是根据 hash值来筛选的 无法确定 key 是否正确 还是需要根据物理偏移量去 查询对应的数据 对比key
                         nextIndexToRead = prevIndexRead;
                     }
                 }

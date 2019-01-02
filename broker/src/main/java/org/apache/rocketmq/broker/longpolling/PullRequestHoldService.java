@@ -163,7 +163,7 @@ public class PullRequestHoldService extends ServiceThread {
                         }
                     }
 
-                    //超过指定时间 也再次获取数据 如果还是没有数据就不管了 这个请求就会丢失
+                    //超过指定时间 也再次获取数据 如果还是没有数据就不管了
                     if (System.currentTimeMillis() >= (request.getSuspendTimestamp() + request.getTimeoutMillis())) {
                         try {
                             this.brokerController.getPullMessageProcessor().executeRequestWhenWakeup(request.getClientChannel(),

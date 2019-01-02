@@ -456,6 +456,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                     if (brokerAllowSuspend && hasSuspendFlag) {
                         long pollingTimeMills = suspendTimeoutMillisLong;
                         if (!this.brokerController.getBrokerConfig().isLongPollingEnable()) {
+                            //不支持长轮询情况 获取 短暂的等待时间后 返回结果到客户端  这里是2个等待时间不同
                             pollingTimeMills = this.brokerController.getBrokerConfig().getShortPollingTimeMills();
                         }
 
@@ -466,7 +467,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                             this.brokerController.getMessageStore().now(), offset, subscriptionData, messageFilter);
                         //将任务添加 到  pullRequestHoldService 的任务队列中然后后台线程会运行任务
                         this.brokerController.getPullRequestHoldService().suspendPullRequest(topic, queueId, pullRequest);
-                        //没找到数据 response 是null
+                        //没找到数据 response 是null  这样 外层不会把结果 返回给客户端 这里通过 长连接 在等待一定时间后 主动将结果推送到客户端
                         response = null;
                         break;
                     }

@@ -15,7 +15,7 @@ To submit a change for inclusion, please do the following:
 
 ## Becoming a Committer
 
-We are always interested in adding new contributors. What we look for are series of contributions, good taste and ongoing interest in the project. If you are interested in becoming a committer, please let one of the existing committers know and they can help you walk through the process.
+We are always interested in adding new contributors. What we look for are series of contributions, good taste and ongoing interest in the project. If you are interested in becoming a committer, please let one of the existing committers know and they can help you walk through the .
 
 Nowadays,we have several important contribution points:
 #### Wiki & JavaDoc

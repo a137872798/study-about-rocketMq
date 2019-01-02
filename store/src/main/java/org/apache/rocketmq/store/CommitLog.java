@@ -1256,6 +1256,8 @@ public class CommitLog {
     //同步刷盘
     class GroupCommitService extends FlushCommitLogService {
         //就是一个 包含栅栏和 起始偏移量的对象
+        //为什么使用2个列表  如果 只使用一个列表 代表 读操作和 写操作 都会针对单列表 进行锁竞争  所以将读写操作分离对应2个列表
+        //同样是读操作 对应一个 列表 (写对应一个列表) 这样能减少锁竞争  相当于按照职能来划分锁(因为 读与读之间  写与写之间的竞争是不可避免的)
         private volatile List<GroupCommitRequest> requestsWrite = new ArrayList<GroupCommitRequest>();
         private volatile List<GroupCommitRequest> requestsRead = new ArrayList<GroupCommitRequest>();
 

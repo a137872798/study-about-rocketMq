@@ -530,6 +530,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 //处理结果  第二个参数是用户可以修改的上下文对象 可以设置重试标识
                 ConsumeMessageConcurrentlyService.this.processConsumeResult(status, context, this);
             } else {
+                //如果 该mq 对象被分配到其他消费者了 本次 无视处理结果
                 log.warn("processQueue is dropped without process consume result. messageQueue={}, msgs={}", messageQueue, msgs);
             }
         }

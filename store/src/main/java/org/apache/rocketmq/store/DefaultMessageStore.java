@@ -190,7 +190,7 @@ public class DefaultMessageStore implements MessageStore {
         boolean result = true;
 
         try {
-            //临时文件存在 代表不是正常关闭的
+            //临时文件存在 代表不是正常关闭的  正常关闭情况 临时文件会被删除
             boolean lastExitOK = !this.isTempFileExist();
             log.info("last shutdown {}", lastExitOK ? "normally" : "abnormally");
 
@@ -207,6 +207,7 @@ public class DefaultMessageStore implements MessageStore {
             result = result && this.loadConsumeQueue();
 
             if (result) {
+                //记录 刷盘点
                 this.storeCheckpoint =
                     new StoreCheckpoint(StorePathConfigHelper.getStoreCheckpoint(this.messageStoreConfig.getStorePathRootDir()));
 
@@ -307,6 +308,7 @@ public class DefaultMessageStore implements MessageStore {
             this.storeCheckpoint.shutdown();
 
             if (this.runningFlags.isWriteable() && dispatchBehindBytes() == 0) {
+                //终止时  删除 abort文件代表是正常关闭的
                 this.deleteFile(StorePathConfigHelper.getAbortFile(this.messageStoreConfig.getStorePathRootDir()));
                 shutDownNormal = true;
             } else {

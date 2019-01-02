@@ -174,7 +174,6 @@ public class MappedFileQueue {
 
     //加载
     public boolean load() {
-        //默认是文件夹???
         File dir = new File(this.storePath);
         //文件中的 子文件
         File[] files = dir.listFiles();

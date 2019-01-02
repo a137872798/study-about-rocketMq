@@ -144,14 +144,14 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                 return;
             }
             log.info("Check topic={}, queues={}", topic, msgQueues);
-            //遍历 每个 mq对象
+            //遍历 每个 mq对象  事务消息好像默认是只有一个队列吧
             for (MessageQueue messageQueue : msgQueues) {
                 long startTime = System.currentTimeMillis();
-                //这里 将 mq 映射成了另一个 指定topic 的mq 对象 并存入容器 为什么这么做???
+                //这里对应的opQueue 代表针对这个queue 的 事务操作队列
                 MessageQueue opQueue = getOpQueue(messageQueue);
                 //拉取 half偏移量  这里查询的时候能够对应到 half 和 op put时的偏移量
                 long halfOffset = transactionalMessageBridge.fetchConsumeOffset(messageQueue);
-                //拉取 op偏移量
+                //获取op topic 下当前消息偏移量
                 long opOffset = transactionalMessageBridge.fetchConsumeOffset(opQueue);
                 log.info("Before check, the queue={} msgOffset={} opOffset={}", messageQueue, halfOffset, opOffset);
                 //没有数据就不需要检查
@@ -163,6 +163,7 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
 
                 List<Long> doneOpOffset = new ArrayList<>();
                 HashMap<Long, Long> removeMap = new HashMap<>();
+                //从op 队列中按照给定的 偏移量作为起点 拉取后面32条数据
                 PullResult pullResult = fillOpRemoveMap(removeMap, opQueue, opOffset, halfOffset, doneOpOffset);
                 if (null == pullResult) {
                     log.error("The queue={} check msgOffset={} with opOffset={} failed, pullResult is null",
@@ -178,10 +179,12 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                         log.info("Queue={} process time reach max={}", messageQueue, MAX_PROCESS_TIME_LIMIT);
                         break;
                     }
+                    //代表 该消息已经被 移除
                     if (removeMap.containsKey(i)) {
                         log.info("Half offset {} has been committed/rolled back", i);
                         removeMap.remove(i);
                     } else {
+                        //正常情况 处理事务消息
                         GetResult getResult = getHalfMsg(messageQueue, i);
                         MessageExt msgExt = getResult.getMsg();
                         if (msgExt == null) {
@@ -238,9 +241,12 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
                             || (valueOfCurrentMinusBorn <= -1);
 
                         if (isNeedCheck) {
+                            //将该消息 再次发送到 事务topic中 成功才能发起回查  这里 在发起回查时会将进度推移就简化了 处理回查队列偏移量的过程
+                            //因为新添加的准备消息 在之后的某次 定时回查又会触发
                             if (!putBackHalfMsgQueue(msgExt, i)) {
                                 continue;
                             }
+                            //进行 事务回查
                             listener.resolveHalfMsg(msgExt);
                         } else {
                             pullResult = fillOpRemoveMap(removeMap, opQueue, pullResult.getNextBeginOffset(), halfOffset, doneOpOffset);
@@ -292,7 +298,7 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
     //获取 op消息并设置到 map中
     private PullResult fillOpRemoveMap(HashMap<Long, Long> removeMap,
         MessageQueue opQueue, long pullOffsetOfOp, long miniOffset, List<Long> doneOpOffset) {
-        //获取指定mq 的 op 消息
+        //从当前 op 队列中 已处理的 偏移量开始 拉取32条数据
         PullResult pullResult = pullOpMsg(opQueue, pullOffsetOfOp, 32);
         if (null == pullResult) {
             return null;
@@ -315,6 +321,7 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
             log.warn("The miss op offset={} in queue={} is empty, pullResult={}", pullOffsetOfOp, opQueue, pullResult);
             return pullResult;
         }
+        //生成结果对象
         for (MessageExt opMessageExt : opMsg) {
             Long queueOffset = getLong(new String(opMessageExt.getBody(), TransactionalMessageUtil.charset));
             log.info("Topic: {} tags: {}, OpOffset: {}, HalfOffset: {}", opMessageExt.getTopic(),
@@ -377,7 +384,6 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
      * @param messageExt Message will be write back to queue
      * @return Put result can used to determine the specific results of storage.
      */
-    //这里的 half 是什么意思??? 只是普通的写入消息而已
     private PutMessageResult putBackToHalfQueueReturnResult(MessageExt messageExt) {
         PutMessageResult putMessageResult = null;
         try {
